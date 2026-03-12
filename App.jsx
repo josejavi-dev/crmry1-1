@@ -14,12 +14,20 @@ import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged }
 import { getFirestore, collection, doc, setDoc, onSnapshot, query, addDoc, writeBatch, getDoc, deleteDoc } from 'firebase/firestore';
 
 // --- 1. CONFIGURACIÓN FIREBASE ---
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const firebaseConfig = {
+  apiKey: "AIzaSyA5Bn2ySGVdIaZzon4LdNVpVB2D5EZs3xI",
+  authDomain: "crmry-c9565.firebaseapp.com",
+  projectId: "crmry-c9565",
+  storageBucket: "crmry-c9565.firebasestorage.app",
+  messagingSenderId: "253004876132",
+  appId: "1:253004876132:web:6df19b80568bf09de09271"
+};
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const APP_VERSION = "v3.9.5 (2026) - Top Series Comparativa"; 
+const appId = 'crmry-c9565';
+const APP_VERSION = "v3.9.5 (2026) - Top Series Comparativa";
 
 // --- LISTA OPCIONES EXPO ---
 const EXPO_OPTIONS = [
@@ -2146,4 +2154,5 @@ export default function App() {
         </div>
     </div>
   );
+
 }
