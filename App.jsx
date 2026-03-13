@@ -2001,9 +2001,9 @@ export default function App() {
 
   useEffect(() => { 
       if (!user) return; 
-      const visitsRef = collection(db, 'artifacts', appId, 'public', 'data', 'visits'); 
-      const updatesRef = collection(db, 'artifacts', appId, 'public', 'data', 'client_updates'); 
-      const quotesRef = collection(db, 'artifacts', appId, 'public', 'data', 'quotes'); 
+      const visitsRef = collection(db, 'visits');
+     const updatesRef = collection(db, 'client_updates');
+      const quotesRef = collection(db, 'quotes');
       
       const unsubVisits = onSnapshot(query(visitsRef), (snapshot) => { 
           const vMap = {}; snapshot.forEach(doc => { vMap[doc.id] = doc.data(); }); setManualVisits(vMap); 
@@ -2029,7 +2029,7 @@ export default function App() {
           if (!docSnap.exists()) { setDataLoaded(true); setSyncStatus("empty"); return; } 
           const manifest = docSnap.data(); 
           setLastUpdated(manifest.updatedAt); 
-          const chunksRef = collection(db, 'artifacts', appId, 'public', 'data', 'storage'); 
+        const chunksRef = collection(db, 'storage');
           const crmPromises = [], seriesPromises = [], promosPromises = [], offersPromises = [], incidentsPromises = [], merskaPromises = []; 
           
           for(let i=0; i < manifest.crmChunks; i++) crmPromises.push(getDoc(doc(chunksRef, `crm_chunk_${i}`))); 
@@ -2156,3 +2156,4 @@ export default function App() {
   );
 
 }
+
