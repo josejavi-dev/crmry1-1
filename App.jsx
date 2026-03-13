@@ -2026,7 +2026,7 @@ export default function App() {
           if (!docSnap.exists()) { setDataLoaded(true); setSyncStatus("empty"); return; } 
           const manifest = docSnap.data(); 
           setLastUpdated(manifest.updatedAt); 
-        const chunksRef = collection(db, 'storage');
+        const chunksRef = collection(db, 'data_chunks');
           const crmPromises = [], seriesPromises = [], promosPromises = [], offersPromises = [], incidentsPromises = [], merskaPromises = []; 
           
           for(let i=0; i < manifest.crmChunks; i++) crmPromises.push(getDoc(doc(chunksRef, `crm_chunk_${i}`))); 
@@ -2153,6 +2153,7 @@ export default function App() {
   );
 
 }
+
 
 
 
