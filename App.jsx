@@ -1983,17 +1983,14 @@ export default function App() {
   const handleAdminSubmit = (e) => { e.preventDefault(); if (adminPassword === "admin") { setIsAdmin(true); localStorage.setItem('vt_admin_mode', 'true'); setIsUploadOpen(true); setShowAdminLogin(false); setAdminPassword(""); setLoginError(false); } else { setLoginError(true); } };
   
   useEffect(() => { 
-      const initAuth = async () => { 
+  const initAuth = async () => {
           try {
-              if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                  await signInWithCustomToken(auth, __initial_auth_token); 
-              } else {
-                  await signInAnonymously(auth); 
-              }
-          } catch (e) {
-              console.error("Auth error:", e);
+              // await signInAnonymously(auth); 
+              console.log("Login saltado");
+          } catch (error) {
+              console.error("Auth error:", error);
           }
-      }; 
+      };
       initAuth(); 
       const unsubscribe = onAuthStateChanged(auth, setUser);
       return () => unsubscribe();
@@ -2156,5 +2153,6 @@ export default function App() {
   );
 
 }
+
 
 
