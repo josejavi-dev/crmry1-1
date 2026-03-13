@@ -27,7 +27,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = 'crmry-c9565';
-const APP_VERSION = "v3.9.5 (2026) - Top Series Comparativa";
+const APP_VERSION = "v4.0.0 (2026) - Optimizado";
 
 // --- LISTA OPCIONES EXPO ---
 const EXPO_OPTIONS = [
@@ -1982,24 +1982,22 @@ export default function App() {
   const handleAdminToggle = () => { if (isAdmin) { setIsAdmin(false); localStorage.removeItem('vt_admin_mode'); setIsUploadOpen(false); } else { setShowAdminLogin(true); } };
   const handleAdminSubmit = (e) => { e.preventDefault(); if (adminPassword === "admin") { setIsAdmin(true); localStorage.setItem('vt_admin_mode', 'true'); setIsUploadOpen(true); setShowAdminLogin(false); setAdminPassword(""); setLoginError(false); } else { setLoginError(true); } };
   
- useEffect(() => { 
+  useEffect(() => { 
     const initAuth = async () => {
       try {
-        const userCredential = await signInAnonymously(auth);
-        console.log("Conectado con ID:", userCredential.user.uid);
+        await signInAnonymously(auth);
       } catch (error) {
         console.error("Error de autenticación:", error);
       }
     };
     initAuth(); 
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
+    return onAuthStateChanged(auth, setUser);
   }, []);
 
   useEffect(() => { 
       if (!user) return; 
       const visitsRef = collection(db, 'visits');
-     const updatesRef = collection(db, 'client_updates');
+      const updatesRef = collection(db, 'client_updates');
       const quotesRef = collection(db, 'quotes');
       
       const unsubVisits = onSnapshot(query(visitsRef), (snapshot) => { 
@@ -2017,7 +2015,8 @@ export default function App() {
       return () => { unsubVisits(); unsubUpdates(); unsubQuotes(); }; 
   }, [user]);
 
-useEffect(() => {
+  // --- OPTIMIZACIÓN AQUÍ: CARGA DE FRAGMENTOS LIMPIA ---
+  useEffect(() => {
     if (!user) return;
     setSyncStatus("loading");
     const manifestRef = doc(db, 'data_chunks', 'manifest');
@@ -2028,32 +2027,35 @@ useEffect(() => {
         setSyncStatus("empty");
         return;
       }
+      
       const manifest = docSnap.data();
       setLastUpdated(manifest.updatedAt);
       const chunksRef = collection(db, 'data_chunks');
-      const crmPromises = [], seriesPromises = [], promosPromises = [], offersPromises = [], incidentsPromises = [], merskaPromises = [];
       
-      for(let i=0; i < manifest.crmChunks; i++) { crmPromises.push(getDoc(doc(chunksRef, 'crm_chunk_' + i))); }
-      for(let i=0; i < manifest.seriesChunks; i++) { seriesPromises.push(getDoc(doc(chunksRef, 'series_chunk_' + i))); }
-      if (manifest.promosChunks) { for(let i=0; i < manifest.promosChunks; i++) { promosPromises.push(getDoc(doc(chunksRef, 'promos_chunk_' + i))); } }
-      if (manifest.offersChunks) { for(let i=0; i < manifest.offersChunks; i++) { offersPromises.push(getDoc(doc(chunksRef, 'offers_chunk_' + i))); } }
-      if (manifest.incidentsChunks) { for(let i=0; i < manifest.incidentsChunks; i++) { incidentsPromises.push(getDoc(doc(chunksRef, 'incidents_chunk_' + i))); } }
-      if (manifest.merskaChunks) { for(let i=0; i < manifest.merskaChunks; i++) { merskaPromises.push(getDoc(doc(chunksRef, 'merska_chunk_' + i))); } }
+      const loadCollection = async (count, prefix) => {
+          if (!count) return [];
+          const promises = [];
+          for (let i = 0; i < count; i++) promises.push(getDoc(doc(chunksRef, `${prefix}${i}`)));
+          const docs = await Promise.all(promises);
+          return docs.filter(d => d.exists()).flatMap(d => d.data().data || []);
+      };
 
       try {
-        const results = await Promise.all([
-          Promise.all(crmPromises), Promise.all(seriesPromises),
-          Promise.all(promosPromises), Promise.all(offersPromises),
-          Promise.all(incidentsPromises), Promise.all(merskaPromises)
+        const [crm, series, promos, offers, incidents, merska] = await Promise.all([
+            loadCollection(manifest.crmChunks, 'crm_chunk_'),
+            loadCollection(manifest.seriesChunks, 'series_chunk_'),
+            loadCollection(manifest.promosChunks, 'promos_chunk_'),
+            loadCollection(manifest.offersChunks, 'offers_chunk_'),
+            loadCollection(manifest.incidentsChunks, 'incidents_chunk_'),
+            loadCollection(manifest.merskaChunks, 'merska_chunk_')
         ]);
-        const extract = (docs) => docs.filter(d => d.exists()).flatMap(d => d.data().data || []);
         
-        setRawCrmData(extract(results[0]));
-        setSeriesData(extract(results[1]));
-        setPromosData(extract(results[2]));
-        setOffersData(extract(results[3]));
-        setIncidentsData(extract(results[4]));
-        setMerskaData(extract(results[5]));
+        setRawCrmData(crm);
+        setSeriesData(series);
+        setPromosData(promos);
+        setOffersData(offers);
+        setIncidentsData(incidents);
+        setMerskaData(merska);
         
         setDataLoaded(true);
         setSyncStatus("synced");
@@ -2062,6 +2064,7 @@ useEffect(() => {
         setSyncStatus("error");
       }
     }, (e) => console.error("Error en Snapshot:", e));
+    
     return () => unsubscribe();
   }, [user, reloadTrigger]);
   
@@ -2164,12 +2167,3 @@ useEffect(() => {
   );
 
 }
-
-
-
-
-
-
-
-
-
