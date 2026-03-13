@@ -2017,7 +2017,7 @@ export default function App() {
       return () => { unsubVisits(); unsubUpdates(); unsubQuotes(); }; 
   }, [user]);
 
-  useEffect(() => { 
+useEffect(() => { 
       if (!user) return; 
       setSyncStatus("loading"); 
       const manifestRef = doc(db, 'data_chunks', 'manifest');
@@ -2026,7 +2026,7 @@ export default function App() {
           if (!docSnap.exists()) { setDataLoaded(true); setSyncStatus("empty"); return; } 
           const manifest = docSnap.data(); 
           setLastUpdated(manifest.updatedAt); 
-        const chunksRef = collection(db, 'data_chunks');
+          const chunksRef = collection(db, 'data_chunks');
           const crmPromises = [], seriesPromises = [], promosPromises = [], offersPromises = [], incidentsPromises = [], merskaPromises = []; 
           
           for(let i=0; i < manifest.crmChunks; i++) crmPromises.push(getDoc(doc(chunksRef, `crm_chunk_${i}`))); 
@@ -2048,7 +2048,7 @@ export default function App() {
               setSyncStatus("synced"); 
           } catch (error) { 
               setSyncStatus("error"); 
-              console.error(error);
+              console.error("Error cargando datos:", error);
           } 
       }, (e) => console.error(e)); 
       return () => unsubscribe(); 
@@ -2153,6 +2153,7 @@ export default function App() {
   );
 
 }
+
 
 
 
