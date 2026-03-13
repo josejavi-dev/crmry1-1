@@ -2020,7 +2020,7 @@ export default function App() {
   useEffect(() => { 
       if (!user) return; 
       setSyncStatus("loading"); 
-      const manifestRef = doc(db, 'storage', 'manifest');
+      const manifestRef = doc(db, 'data_chunks', 'manifest');
       
       const unsubscribe = onSnapshot(manifestRef, async (docSnap) => { 
           if (!docSnap.exists()) { setDataLoaded(true); setSyncStatus("empty"); return; } 
@@ -2153,6 +2153,7 @@ export default function App() {
   );
 
 }
+
 
 
 
