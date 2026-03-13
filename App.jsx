@@ -1982,18 +1982,18 @@ export default function App() {
   const handleAdminToggle = () => { if (isAdmin) { setIsAdmin(false); localStorage.removeItem('vt_admin_mode'); setIsUploadOpen(false); } else { setShowAdminLogin(true); } };
   const handleAdminSubmit = (e) => { e.preventDefault(); if (adminPassword === "admin") { setIsAdmin(true); localStorage.setItem('vt_admin_mode', 'true'); setIsUploadOpen(true); setShowAdminLogin(false); setAdminPassword(""); setLoginError(false); } else { setLoginError(true); } };
   
-  useEffect(() => { 
-  const initAuth = async () => {
-          try {
-              // await signInAnonymously(auth); 
-              console.log("Login saltado");
-          } catch (error) {
-              console.error("Auth error:", error);
-          }
-      };
-      initAuth(); 
-      const unsubscribe = onAuthStateChanged(auth, setUser);
-      return () => unsubscribe();
+ useEffect(() => { 
+    const initAuth = async () => {
+      try {
+        const userCredential = await signInAnonymously(auth);
+        console.log("Conectado con ID:", userCredential.user.uid);
+      } catch (error) {
+        console.error("Error de autenticación:", error);
+      }
+    };
+    initAuth(); 
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => { 
@@ -2017,41 +2017,52 @@ export default function App() {
       return () => { unsubVisits(); unsubUpdates(); unsubQuotes(); }; 
   }, [user]);
 
-useEffect(() => { 
-      if (!user) return; 
-      setSyncStatus("loading"); 
-      const manifestRef = doc(db, 'data_chunks', 'manifest');
+useEffect(() => {
+    if (!user) return;
+    setSyncStatus("loading");
+    const manifestRef = doc(db, 'data_chunks', 'manifest');
+    
+    const unsubscribe = onSnapshot(manifestRef, async (docSnap) => {
+      if (!docSnap.exists()) {
+        setDataLoaded(true);
+        setSyncStatus("empty");
+        return;
+      }
+      const manifest = docSnap.data();
+      setLastUpdated(manifest.updatedAt);
+      const chunksRef = collection(db, 'data_chunks');
+      const crmPromises = [], seriesPromises = [], promosPromises = [], offersPromises = [], incidentsPromises = [], merskaPromises = [];
       
-      const unsubscribe = onSnapshot(manifestRef, async (docSnap) => { 
-          if (!docSnap.exists()) { setDataLoaded(true); setSyncStatus("empty"); return; } 
-          const manifest = docSnap.data(); 
-          setLastUpdated(manifest.updatedAt); 
-          const chunksRef = collection(db, 'data_chunks');
-          const crmPromises = [], seriesPromises = [], promosPromises = [], offersPromises = [], incidentsPromises = [], merskaPromises = []; 
-          
-          for(let i=0; i < manifest.crmChunks; i++) crmPromises.push(getDoc(doc(chunksRef, `crm_chunk_${i}`))); 
-          for(let i=0; i < manifest.seriesChunks; i++) seriesPromises.push(getDoc(doc(chunksRef, `series_chunk_${i}`))); 
-          if (manifest.promosChunks) for(let i=0; i < manifest.promosChunks; i++) promosPromises.push(getDoc(doc(chunksRef, `promos_chunk_${i}`))); 
-          if (manifest.offersChunks) for(let i=0; i < manifest.offersChunks; i++) offersPromises.push(getDoc(doc(chunksRef, `offers_chunk_${i}`))); 
-          if (manifest.incidentsChunks) for(let i=0; i < manifest.incidentsChunks; i++) incidentsPromises.push(getDoc(doc(chunksRef, `incidents_chunk_${i}`))); 
-          if (manifest.merskaChunks) for(let i=0; i < manifest.merskaChunks; i++) merskaPromises.push(getDoc(doc(chunksRef, `merska_chunk_${i}`))); 
-          
-          try { 
-              const [crmDocs, seriesDocs, promosDocs, offersDocs, incidentsDocs, merskaDocs] = await Promise.all([Promise.all(crmPromises), Promise.all(seriesPromises), Promise.all(promosPromises), Promise.all(offersPromises), Promise.all(incidentsPromises), Promise.all(merskaPromises)]); 
-              setRawCrmData(crmDocs.filter(d=>d.exists()).flatMap(d => d.data().data)); 
-              setSeriesData(seriesDocs.filter(d=>d.exists()).flatMap(d => d.data().data)); 
-              setPromosData(promosDocs.filter(d=>d.exists()).flatMap(d => d.data().data)); 
-              setOffersData(offersDocs.filter(d=>d.exists()).flatMap(d => d.data().data)); 
-              setIncidentsData(incidentsDocs.filter(d=>d.exists()).flatMap(d => d.data().data)); 
-              setMerskaData(merskaDocs.filter(d=>d.exists()).flatMap(d => d.data().data)); 
-              setDataLoaded(true); 
-              setSyncStatus("synced"); 
-          } catch (error) { 
-              setSyncStatus("error"); 
-              console.error("Error cargando datos:", error);
-          } 
-      }, (e) => console.error(e)); 
-      return () => unsubscribe(); 
+      for(let i=0; i < manifest.crmChunks; i++) { crmPromises.push(getDoc(doc(chunksRef, 'crm_chunk_' + i))); }
+      for(let i=0; i < manifest.seriesChunks; i++) { seriesPromises.push(getDoc(doc(chunksRef, 'series_chunk_' + i))); }
+      if (manifest.promosChunks) { for(let i=0; i < manifest.promosChunks; i++) { promosPromises.push(getDoc(doc(chunksRef, 'promos_chunk_' + i))); } }
+      if (manifest.offersChunks) { for(let i=0; i < manifest.offersChunks; i++) { offersPromises.push(getDoc(doc(chunksRef, 'offers_chunk_' + i))); } }
+      if (manifest.incidentsChunks) { for(let i=0; i < manifest.incidentsChunks; i++) { incidentsPromises.push(getDoc(doc(chunksRef, 'incidents_chunk_' + i))); } }
+      if (manifest.merskaChunks) { for(let i=0; i < manifest.merskaChunks; i++) { merskaPromises.push(getDoc(doc(chunksRef, 'merska_chunk_' + i))); } }
+
+      try {
+        const results = await Promise.all([
+          Promise.all(crmPromises), Promise.all(seriesPromises),
+          Promise.all(promosPromises), Promise.all(offersPromises),
+          Promise.all(incidentsPromises), Promise.all(merskaPromises)
+        ]);
+        const extract = (docs) => docs.filter(d => d.exists()).flatMap(d => d.data().data || []);
+        
+        setRawCrmData(extract(results[0]));
+        setSeriesData(extract(results[1]));
+        setPromosData(extract(results[2]));
+        setOffersData(extract(results[3]));
+        setIncidentsData(extract(results[4]));
+        setMerskaData(extract(results[5]));
+        
+        setDataLoaded(true);
+        setSyncStatus("synced");
+      } catch (error) {
+        console.error("Error cargando datos:", error);
+        setSyncStatus("error");
+      }
+    }, (e) => console.error("Error en Snapshot:", e));
+    return () => unsubscribe();
   }, [user, reloadTrigger]);
   
   useEffect(() => { 
@@ -2153,6 +2164,7 @@ useEffect(() => {
   );
 
 }
+
 
 
 
